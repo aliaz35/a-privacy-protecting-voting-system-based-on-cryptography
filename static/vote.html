@@ -14,6 +14,7 @@
         <label for="option2">候选人2</label><br>
         <input type="radio" id="option3" name="vote" value="选项3">
         <label for="option3">候选人3</label><br>
+        <input type="text" id="Authentication_Keys" name="Authentication_Keys" placeholder="请输入您的key"><br>
         <button type="submit">投票</button>
     </form>
 
@@ -21,19 +22,42 @@
         document.getElementById('voteForm').addEventListener('submit', function(event) {
             event.preventDefault();
             var vote = document.querySelector('input[name="vote"]:checked').value;
-            fetch('/vote', {
+            var authKey = document.getElementById('Authentication_Keys').value;
+            fetch('/check_key', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ vote: vote }),
+                body: JSON.stringify({ authKey: authKey }),
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Success:', data);
-                alert('投票成功！感谢您的参与。');
-            })
-            .catch((error) => {
+            console.log(data);
+            if (data.success) {
+                // 如果验证成功，进行投票操作
+                    fetch('/vote', {
+                    method: 'POST',
+                    headers: {
+                        'Content - Type': 'application/json'
+                    },
+                    body: JSON.stringify({ vote: vote })
+                });
+            } else {
+                console.error('Error:', data.message);
+                alert('投票失败，您没有对应的keys，请检查您的输入。');
+                return Promise.reject();
+            }
+        })
+         .then(response => {
+            if (response) {
+                return response.json();
+            }
+        })
+        .then(data => {
+            console.log('Success:', data);
+            alert('投票成功！感谢您的参与。');
+        })
+        .catch((error) => {
                 console.error('Error:', error);
                 alert('投票失败，请稍后再试。');
             });

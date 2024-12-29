@@ -4,6 +4,7 @@ from functools import wraps
 from werkzeug.security import generate_password_hash
 from werkzeug.security import check_password_hash
 import os
+import uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -20,6 +21,10 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(200))  # 调整为能容纳加密后的密码
+
+class AuthenticationKey(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    authentication_key = db.Column(db.String(200), nullable=False)
 
 @app.route('/')
 def home():
@@ -53,7 +58,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        return redirect(url_for('users'))
+        return redirect(url_for('home'))
     return render_template('register.html')
 
 def login_required(f):
@@ -64,7 +69,7 @@ def login_required(f):
         return f(*args, **kwargs)  # 如果已登录，正常访问视图
     return decorated_function
 
-@app.route('/vote', methods=['GET', 'POST'])
+@app.route('/vote', methods=['POST'])
 @login_required  # 使用装饰器保护路由
 def vote():
     data = request.json
@@ -81,7 +86,50 @@ def users():
     users = User.query.all()
     return render_template('users.html', users=users)
 
+@app.route('/authentication_keys')
+def authentication_keys():
+    authentication_keys = AuthenticationKey.query.all()
+    return render_template('authentication_keys.html', authentication_keys=authentication_keys)
+
+@app.route('/check_key', methods = ['POST'])
+def check_key():
+    data = request.get_json()
+    authKey = data.get('authKey')
+    keys_in_db = AuthenticationKey.query.all()
+    for key_in_db in keys_in_db:
+        if check_password_hash(key_in_db.authentication_key, authKey):
+            try:
+                db.session.delete(key_in_db)
+                db.session.commit()
+                return jsonify({"success": True})
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"success": False, "message": f"删除密钥时出错: {str(e)}"})
+    return jsonify({"success": False, "message": "无效的认证密钥"})
+
+
+def generate_keys():
+    for _ in range(3):
+        key = str(uuid.uuid4())
+        print(key)
+        hashed_key = generate_password_hash(key)
+
+        new_key = AuthenticationKey(authentication_key=hashed_key)
+        db.session.add(new_key)
+
+    try:
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error: {e}")
+        return []
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+        # generate_keys()
+        # db.session.query(AuthenticationKey).delete()
+        # db.session.commit()
+    app.run(debug = True)
