@@ -15,7 +15,8 @@ def index():
 @app.route('/vote', methods=['POST'])
 def vote():
     data = request.json
-    vote = data.get('vote')
+    vote = data.get("vote")
+    key = data.get("key")
     if vote in votes:
         votes[vote] += 1
         return jsonify({"message": "投票成功", "votes": votes})
@@ -23,4 +24,4 @@ def vote():
         return jsonify({"message": "无效的投票选项"}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(ssl_context="adhoc", debug=True)
