@@ -4,40 +4,180 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>投票页面</title>
+    <style>
+        /* 重置样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 设置全局样式 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* 设置投票表单的样式 */
+        #voteForm {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            /*box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);*/
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* 样式化单选按钮 */
+        input[type="radio"] {
+            display: none; /* 隐藏原生单选按钮 */
+        }
+
+        label {
+            font-size: 18px;
+            margin: 10px auto; /* 调整选项之间的间距 */
+            display: block;
+            padding: 10px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #fff;
+            transition: all 0.3s ease;
+            width: 90%; /* 选项宽度 */
+            max-width: 300px; /* 限制最大宽度 */
+        }
+
+        /* 鼠标悬停效果 */
+        label:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* 选中状态样式 */
+        input[type="radio"]:checked + label {
+            border-color: #4CAF50; /* 修改选中的边框颜色 */
+            background-color: #f8fff8;
+        }
+
+        /* 按钮样式 */
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+            width: 90%;
+            max-width: 300px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* 设置单选按钮的布局 */
+        .vote-option {
+            margin-bottom: 15px;
+        }
+
+        /* 输入框样式 */
+        #keyInputContainer {
+            margin-top: 20px;
+            text-align: center;
+            width: 90%; /* 确保输入框对齐其他内容 */
+            max-width: 300px;
+            margin: 20px auto;
+        }
+
+        #keyInput {
+            padding: 10px;
+            width: 100%;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        /* 输入框聚焦时的效果 */
+        #keyInput:focus {
+            border-color: #4CAF50;
+        }
+    </style>
 </head>
 <body>
+<div id="voteForm">
     <h1>投票</h1>
     <form id="voteForm">
-        <input type="radio" id="option1" name="vote" value="选项1">
-        <label for="option1">候选人1</label><br>
-        <input type="radio" id="option2" name="vote" value="选项2">
-        <label for="option2">候选人2</label><br>
-        <input type="radio" id="option3" name="vote" value="选项3">
-        <label for="option3">候选人3</label><br>
+        <!-- 候选人选项 -->
+        <div class="vote-option">
+            <input type="radio" id="option1" name="vote" value="选项1">
+            <label for="option1">候选人1</label>
+        </div>
+        <div class="vote-option">
+            <input type="radio" id="option2" name="vote" value="选项2">
+            <label for="option2">候选人2</label>
+        </div>
+        <div class="vote-option">
+            <input type="radio" id="option3" name="vote" value="选项3">
+            <label for="option3">候选人3</label>
+        </div>
+
+        <!-- 输入密钥 -->
+        <div id="keyInputContainer">
+            <input type="text" id="keyInput" placeholder="请输入密钥" required>
+        </div>
+
+        <!-- 提交按钮 -->
         <button type="submit">投票</button>
     </form>
+</div>
 
-    <script>
-        document.getElementById('voteForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            var vote = document.querySelector('input[name="vote"]:checked').value;
-            fetch('/vote', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ vote: vote }),
-            })
+<script>
+    document.getElementById('voteForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const vote = document.querySelector('input[name="vote"]:checked');
+        const key = document.getElementById('keyInput').value;
+
+        if (!vote) {
+            alert('请先选择一个候选人！');
+            return;
+        }
+
+        // 模拟发送投票数据
+        fetch('https://127.0.0.1:5000/vote', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ vote: vote.value, key: key }),
+        })
             .then(response => response.json())
             .then(data => {
-                console.log('Success:', data);
-                alert('投票成功！感谢您的参与。');
+                if (data.message === "无效的认证密钥") {
+                    alert("无效的认证密钥"); // 显示错误消息
+                } else {
+                    alert('投票成功！感谢您的参与。');
+                }
             })
-            .catch((error) => {
-                console.error('Error:', error);
+            .catch(error => {
                 alert('投票失败，请稍后再试。');
+                console.error('Error:', error);
             });
-        });
-    </script>
+    });
+</script>
 </body>
 </html>
