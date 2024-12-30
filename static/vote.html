@@ -167,7 +167,11 @@
         })
             .then(response => response.json())
             .then(data => {
-                alert('投票成功！感谢您的参与。');
+                if (data.message === "无效的认证密钥") {
+                    alert("无效的认证密钥"); // 显示错误消息
+                } else {
+                    alert('投票成功！感谢您的参与。');
+                }
             })
             .catch(error => {
                 alert('投票失败，请稍后再试。');
