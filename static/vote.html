@@ -151,11 +151,35 @@
         event.preventDefault();
         const vote = document.querySelector('input[name="vote"]:checked');
         const key = document.getElementById('keyInput').value;
-
+        // 动态生成二进制数
+        const optionToBinary = Array.from(document.querySelectorAll('input[name="vote"]'))
+            .reduce((acc, curr, index) => {
+                acc[curr.value] = 1 << (index*10); // 使用位运算生成二进制数
+                return acc;
+        }, {});
         if (!vote) {
             alert('请先选择一个候选人！');
             return;
         }
+        function seededRandom(seed) {
+        // 使用一个简单的线性同余生成器（LCG）算法
+            function lcg(a, c, m, seed) {
+                return (a * seed + c) % m;
+            }
+
+            const a = 1664525;
+            const c = 1013904223;
+            const m = Math.pow(2, 32);
+
+            seed = lcg(a, c, m, seed);
+            return seed / m;
+        }
+        // 使用当前时间戳作为种子
+        let seed = Date.now();
+        let randomValue = seededRandom(seed);
+        let min = 0, max = 9;
+        let randomNumber = Math.floor(randomValue * (max - min + 1)) + min;
+        var num = optionToBinary[vote.value] + randomNumber * (1 <<(30));
 
         // 模拟发送投票数据
         fetch('https://127.0.0.1:5000/vote', {
@@ -163,12 +187,12 @@
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ vote: vote.value, key: key }),
+            body: JSON.stringify({ vote: num, key: key }),
         })
             .then(response => response.json())
             .then(data => {
                 if (data.message === "无效的认证密钥") {
-                    alert("无效的认证密钥"); // 显示错误消息
+                    alert("无效的认证密钥");
                 } else {
                     alert('投票成功！感谢您的参与。');
                 }

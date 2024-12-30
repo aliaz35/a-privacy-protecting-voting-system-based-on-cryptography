@@ -3,24 +3,18 @@ from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 from werkzeug.security import generate_password_hash
 from werkzeug.security import check_password_hash
+from phe import paillier
+import pickle
 import os
-import uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 db = SQLAlchemy(app)
-
-votes = {
-    "候选人1": 0,
-    "候选人2": 0,
-    "候选人3": 0
-}
 class User(db.Model):
-
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    password = db.Column(db.String(200))  # 调整为能容纳加密后的密码
+    password = db.Column(db.String(200))
 
 class AuthenticationKey(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,37 +70,25 @@ def vote():
     vote = data.get('vote')
     keys_in_db = AuthenticationKey.query.all()
     authKey = data.get('key')
+    file_path_public = 'paillier_public_key.pkl'
+    with open(file_path_public, 'rb') as file:
+        public_key = pickle.load(file)
     for key_in_db in keys_in_db:
         if check_password_hash(key_in_db.authentication_key, authKey):
             try:
                 db.session.delete(key_in_db)
                 db.session.commit()
-                print(1)
-                if vote in votes:
-                    votes[vote] += 1
-                    return jsonify({"message": "投票成功", "votes": votes})
-                else:
-                    return jsonify({"message": "无效的投票选项"}), 401
+                file_path = 'result.pkl'
+                with open(file_path, 'rb') as file:
+                    res = pickle.load(file)
+                res = res + public_key.encrypt(int(vote))
+                with open(file_path, 'wb') as file:
+                    pickle.dump(res, file)
+                return jsonify({"message": "投票成功"})
             except Exception as e:
                 db.session.rollback()
                 return jsonify({"message": f"删除密钥时出错: {str(e)}"})
     return jsonify({"message": "无效的认证密钥"}), 401
-
-@app.route('/check_key', methods = ['POST'])
-def check_key():
-    data = request.get_json()
-    authKey = data.get('authKey')
-    keys_in_db = AuthenticationKey.query.all()
-    for key_in_db in keys_in_db:
-        if check_password_hash(key_in_db.authentication_key, authKey):
-            try:
-                db.session.delete(key_in_db)
-                db.session.commit()
-                return jsonify({"success": True})
-            except Exception as e:
-                db.session.rollback()
-                return jsonify({"success": False, "message": f"删除密钥时出错: {str(e)}"})
-    return jsonify({"success": False, "message": "无效的认证密钥"})
 
 if __name__ == '__main__':
     with app.app_context():

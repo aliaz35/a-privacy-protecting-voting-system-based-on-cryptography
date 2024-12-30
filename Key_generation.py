@@ -24,7 +24,6 @@ def generate_keys():
         key = str(uuid.uuid4())
         print(key)
         hashed_key = generate_password_hash(key)
-
         new_key = AuthenticationKey(authentication_key=hashed_key)
         db.session.add(new_key)
 
